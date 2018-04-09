@@ -1,0 +1,72 @@
+<!doctype html>
+<html>
+
+<head>
+  <title>Socket.IO chat</title>
+  <link rel="stylesheet" type="text/css" href="page.css">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+
+<body>
+  <form id="usernameForm" action="">
+    <input placeholder="Username" id="user" autocomplete="off" />
+    <button>UpdateUser</button>
+  </form>
+  <ul id="messages"></ul>
+  <span id="feedback"></span>
+  <form id="messageForm" action="">
+    <input id="m" autocomplete="off" />
+    <button>Send</button>
+  </form>
+</body>
+<script src="/socket.io/socket.io.js"></script>
+<script src="https://code.jquery.com/jquery-1.11.1.js"></script>
+<script>
+  $(function () {
+    var socket = io();
+    var typingTimeout;
+    var currentUserName = "Anonymous";
+    $("#m").bind("keypress", function () {
+      socket.emit("typing");
+    })
+    $('#usernameForm').submit(function () {
+      var usernameVal = $('#user').val();
+      socket.emit('update username', { username: usernameVal });
+      currentUserName = usernameVal;
+      $('#user').val('');
+      return false;
+    });
+
+    $('#messageForm').submit(function () {
+      socket.emit('chat message', $('#m').val());
+      $('#messages').append($('<li class="me">').text(currentUserName + ": " + $('#m').val()));
+      $('#m').val('');
+      return false;
+    });
+
+    function setTimeoutNow() {
+      typingTimeout = setTimeout(function () {
+        $('#feedback').html("");
+      }, 1000);
+    }
+
+    socket.on("typing", function (data) {
+      clearTimeout(typingTimeout);
+      $('#feedback').html(data.username + ": is typing...");
+      setTimeoutNow();
+    })
+    socket.on('chat message', function (data) {
+      $('#feedback').html("");
+      $('#messages').append($('<li class>').text(data.username + ": " + data.message));
+      clearTimeout(typingTimeout);
+    });
+    socket.on('join', function (msg) {
+      $('#messages').append($('<li>').text(msg));
+    });
+    socket.on('disconnect', function (msg) {
+      $('#messages').append($('<li>').text(msg));
+    });
+  });
+</script>
+
+</html>
